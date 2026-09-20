@@ -6,7 +6,7 @@ import { ArrowRight, CheckCircle2, Eye, EyeOff, Flame, ShieldCheck, UsersRound }
 import Link from "next/link";
 
 export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
-  const supabase = createClient();
+  const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -17,6 +17,14 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    try {
+      setSupabase(createClient());
+    } catch {
+      setError("Supabase is not configured. Please check the deployment environment variables.");
+    }
+  }, []);
+
+  useEffect(() => {
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("error")) {
       setError("Authentication callback failed. Try again.");
     }
@@ -24,6 +32,10 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!supabase) {
+      setError("Supabase is not ready. Refresh the page and try again.");
+      return;
+    }
     setLoading(true);
     setError(null);
     setMessage(null);
@@ -106,7 +118,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
               </Field>
               {error && <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
               {message && <div className="flex gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"><CheckCircle2 size={17} className="mt-0.5 shrink-0" />{message}</div>}
-              <button disabled={loading} className="group flex w-full items-center justify-center gap-2 rounded-xl bg-black px-4 py-3.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60">
+              <button disabled={loading || !supabase} className="group flex w-full items-center justify-center gap-2 rounded-xl bg-black px-4 py-3.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60">
                 {loading ? "Working…" : isSignup ? "Create account" : "Sign in"}<ArrowRight size={17} className="transition group-hover:translate-x-0.5" />
               </button>
             </form>
